@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <iostream>
+#include <vector>
 
 /*
  * You may need to define some global variables for the information of the game map here.
@@ -10,11 +11,17 @@
  * class is not taught yet. However, if you are member of A-class or have learnt the use of cpp class, member functions,
  * etc., you're free to modify this structure.
  */
+
 int rows;         // The count of rows of the game map. You MUST NOT modify its name.
 int columns;      // The count of columns of the game map. You MUST NOT modify its name.
 int total_mines;  // The count of mines of the game map. You MUST NOT modify its name. You should initialize this
                   // variable in function InitMap. It will be used in the advanced task.
 int game_state;  // The state of the game, 0 for continuing, 1 for winning, -1 for losing. You MUST NOT modify its name.
+std::vector<std::vector<bool>> map;          // 实际排布地图，1是踩到雷
+std::vector<std::vector<char>> map_visible;  // 玩家可见地图
+int explored = 0;                            // 已经探明的数量
+int target = 0;                              // 需要探明的数量
+int marked_mine_count = 0;                   // 标记的数量
 
 /**
  * @brief The definition of function InitMap()
@@ -29,8 +36,22 @@ int game_state;  // The state of the game, 0 for continuing, 1 for winning, -1 f
  * would be initialized, with all the blocks unvisited.
  */
 void InitMap() {
-  std::cin >> rows >> columns;
-  // TODO (student): Implement me!
+    std::cin >> rows >> columns;
+    // TODO (student): Implement me!
+    map = std::vector(rows, std::vector<bool>(columns, false));
+    map_visible = std::vector(rows, std::vector<char>(columns));
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < columns; j++) {
+            char c;
+            std::cin >> c;
+            map_visible[i][j] = '?';
+            if (c == 'X') {
+                map[i][j] = true;
+                total_mines++;
+            }
+        }
+    }
+    target = rows * columns - total_mines;
 }
 
 /**
@@ -63,8 +84,49 @@ void InitMap() {
  *
  * @note For invalid operation, you should not do anything.
  */
+bool is_valid_position(int r, int c) {
+    // 检查合法坐标
+    return r >= 0 && r < rows && c >= 0 && c < columns;
+}
+
+int get_mine_nums(int r, int c, bool get_flagged = false) {
+    // 检查3*3区域的雷数量
+    int cnt = 0;
+    for (int i = r - 1; i <= r + 1; i++) {
+        for (int j = c - 1; j <= c + 1; j++) {
+            // 去除不合法位置
+            if (!is_valid_position(i, j)) continue;
+            if (i == r && j == c) continue;
+            if (map[i][j] && !get_flagged) cnt++;
+            if (map_visible[i][j] == '@' && get_flagged) cnt++;
+        }
+    }
+    return cnt;
+}
+
 void VisitBlock(int r, int c) {
-  // TODO (student): Implement me!
+    // TODO (student): Implement me!
+    // 已经被探索过或者做过标记，跳过
+    if (map_visible[r][c] != '?') return;
+    if (map[r][c]) {
+        // 踩到雷，直接退出
+        map_visible[r][c] = 'X';
+        game_state = -1;
+        return;
+    }
+    int cnt = get_mine_nums(r, c);
+    map_visible[r][c] = cnt + 48;
+    explored++;
+    if (cnt == 0) {
+        // 周边没有雷，排查外围一圈
+        for (int i = r - 1; i <= r + 1; i++) {
+            for (int j = c - 1; j <= c + 1; j++) {
+                if (!is_valid_position(i, j)) continue;
+                if (map_visible[i][j] == '?') VisitBlock(i, j);
+            }
+        }
+    }
+    if (explored == target) game_state = 1;
 }
 
 /**
@@ -101,7 +163,17 @@ void VisitBlock(int r, int c) {
  * @note For invalid operation, you should not do anything.
  */
 void MarkMine(int r, int c) {
-  // TODO (student): Implement me!
+    // TODO (student): Implement me!
+    // 已经被探索过或者做过标记，跳过
+    if (map_visible[r][c] != '?') return;
+    // 不是地雷，失败
+    if (!map[r][c]) {
+        map_visible[r][c] = 'X';
+        game_state = -1;
+        return;
+    }
+    map_visible[r][c] = '@';
+    marked_mine_count++;
 }
 
 /**
@@ -120,8 +192,21 @@ void MarkMine(int r, int c) {
  *     01@
  * And the game ends (and player wins).
  */
+
 void AutoExplore(int r, int c) {
-  // TODO (student): Implement me!
+    // TODO (student): Implement me!
+    if (map_visible[r][c] == '?' || map_visible[r][c] == '@') return;
+    int cnt = get_mine_nums(r, c);
+    int cnt_flagged = get_mine_nums(r, c, true);
+    if (cnt != cnt_flagged) return;
+
+    // 自动点开
+    for (int i = r - 1; i <= r + 1; i++) {
+        for (int j = c - 1; j <= c + 1; j++) {
+            if (!is_valid_position(i, j)) continue;
+            if (map_visible[i][j] == '?') VisitBlock(i, j);
+        }
+    }
 }
 
 /**
@@ -134,8 +219,16 @@ void AutoExplore(int r, int c) {
  * @note If the player wins, we consider that ALL mines are correctly marked.
  */
 void ExitGame() {
-  // TODO (student): Implement me!
-  exit(0);  // Exit the game immediately
+    // TODO (student): Implement me!
+    if (game_state == 1) {
+        std::cout << "YOU WIN!" << std::endl;
+        std::cout << explored << ' ' << total_mines << std::endl;
+    }
+    if (game_state == -1) {
+        std::cout << "GAME OVER!" << std::endl;
+        std::cout << explored << ' ' << marked_mine_count << std::endl;
+    }
+    exit(0);  // Exit the game immediately
 }
 
 /**
@@ -163,7 +256,18 @@ void ExitGame() {
  * @note Use std::cout to print the game map, especially when you want to try the advanced task!!!
  */
 void PrintMap() {
-  // TODO (student): Implement me!
+    // TODO (student): Implement me!
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < columns; j++) {
+            if (!is_valid_position(i, j)) continue;
+            if (game_state == 1 && map_visible[i][j] == '?') {
+                std::cout << '@';
+                continue;
+            }
+            std::cout << map_visible[i][j];
+        }
+        std::cout << std::endl;
+    }
 }
 
 #endif

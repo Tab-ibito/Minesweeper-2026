@@ -7,22 +7,24 @@
  * Just finish server.h and run!
  */
 int main() {
-  InitMap();
-  PrintMap();
-  while (true) {
-    int pos_x, pos_y, type;
-    // Read the coordinate and operation type. 0 for VisitBlock(x, y), 1 for MarkMine(x, y) and 2 for AutoExplore(x, y)
-    std::cin >> pos_x >> pos_y >> type;
-    if (type == 0) {
-      VisitBlock(pos_x, pos_y);
-    } else if (type == 1) {
-      MarkMine(pos_x, pos_y);
-    } else if (type == 2) {
-      AutoExplore(pos_x, pos_y);
-    }
+    // freopen("../../testcases/basic/13.in", "r", stdin);
+    InitMap();
     PrintMap();
-    if (game_state != 0) {
-      ExitGame();
+    while (true) {
+        int pos_x, pos_y, type;
+        // Read the coordinate and operation type. 0 for VisitBlock(x, y), 1 for MarkMine(x, y) and 2 for AutoExplore(x,
+        // y)
+        std::cin >> pos_x >> pos_y >> type;
+        if (type == 0) {
+            VisitBlock(pos_x, pos_y);
+        } else if (type == 1) {
+            MarkMine(pos_x, pos_y);
+        } else if (type == 2) {
+            AutoExplore(pos_x, pos_y);
+        }
+        PrintMap();
+        if (game_state != 0) {
+            ExitGame();
+        }
     }
-  }
 }
